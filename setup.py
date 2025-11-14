@@ -71,7 +71,7 @@ def install_dependencies(venv_python):
     dependencies = [
         "flask",
         "flask-cors",
-        "markitdown",
+        "markitdown[all]",
         "youtube-transcript-api",
         "yt-dlp"
     ]

@@ -56,7 +56,7 @@ echo "Installing dependencies..."
 echo "This may take a few minutes..."
 echo ""
 
-pip install flask flask-cors markitdown youtube-transcript-api yt-dlp
+pip install flask flask-cors "markitdown[all]" youtube-transcript-api yt-dlp
 
 echo ""
 echo "✓ All dependencies installed successfully!"

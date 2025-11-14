@@ -206,7 +206,7 @@ If you prefer manual installation:
 ### **1. Install dependencies**
 
 ```bash
-pip install flask flask-cors markitdown youtube-transcript-api yt-dlp
+pip install flask flask-cors "markitdown[all]" youtube-transcript-api yt-dlp
 ```
 
 ### **2. Run the server**
