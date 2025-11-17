@@ -176,22 +176,26 @@ flowchart TD
 Use the automated setup scripts that handle everything for you:
 
 **On Windows:**
+
 ```bash
 setup.bat
 ```
 
 **On macOS/Linux:**
+
 ```bash
 chmod +x setup.sh
 ./setup.sh
 ```
 
 **Universal Python Script (All platforms):**
+
 ```bash
 python3 setup.py
 ```
 
 These scripts will:
+
 - ✓ Check Python installation
 - ✓ Create virtual environment
 - ✓ Install all dependencies
