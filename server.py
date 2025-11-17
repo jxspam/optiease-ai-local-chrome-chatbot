@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MarkItDown MCP Server for Optiease AI
+MarkItDown Flask Server for Optiease AI
 Supports all MarkItDown file formats and YouTube transcript extraction
 """
 

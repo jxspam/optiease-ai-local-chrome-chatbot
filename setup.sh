@@ -1,8 +1,30 @@
 #!/bin/bash
-# Cross-platform setup script for Optiease AI Server
-# Works on macOS and Linux
+# Optiease AI Server - Setup & Run Script for macOS/Linux
+# First run: Sets up environment and starts server
+# Subsequent runs: Just starts the server
 
 set -e  # Exit on error
+
+# Check if virtual environment already exists
+if [ -f "venv/bin/python" ]; then
+    echo "========================================="
+    echo "Optiease AI Server Launcher"
+    echo "========================================="
+    echo ""
+    echo "✓ Virtual environment detected. Starting server..."
+    echo "Server will run on http://localhost:5000"
+    echo ""
+    echo "Press Ctrl+C to stop the server"
+    echo "========================================="
+    echo ""
+    
+    venv/bin/python server.py
+    
+    echo ""
+    echo "Server stopped."
+    read -p "Press Enter to exit..."
+    exit 0
+fi
 
 echo "========================================="
 echo "Optiease AI Server Setup (Mac/Linux)"
@@ -72,6 +94,14 @@ echo "========================================="
 echo "Setup Complete!"
 echo "========================================="
 echo ""
+
+# Check for --no-run flag
+if [ "$1" = "--no-run" ]; then
+    echo "Setup complete! Run this script again to start the server."
+    read -p "Press Enter to exit..."
+    exit 0
+fi
+
 echo "Starting server..."
 echo "Server will run on http://localhost:5000"
 echo "Press Ctrl+C to stop the server"
@@ -79,3 +109,8 @@ echo ""
 
 # Run the server
 python server.py
+
+# If server stops, pause so user can see any error messages
+echo ""
+echo "Server stopped."
+read -p "Press Enter to exit..."

@@ -55,9 +55,11 @@ class ChromeAISession {
         temperature: Math.max(0, Math.min(2, temperature)), // Clamp to valid range
         topK: Math.max(1, Math.min(100, topK)), // Clamp to valid range
         // Enable multimodal support for image processing
+        // Note: Audio is NOT currently supported by Chrome's Gemini Nano
         expectedInputs: [
           { type: 'text' },
           { type: 'image' }
+          // { type: 'audio' } // Not supported yet by Gemini Nano
         ],
         expectedOutputs: [
           { type: 'text', languages: ['en'] }
@@ -67,10 +69,22 @@ class ChromeAISession {
           m.addEventListener('downloadprogress', (e) => {
             const percent = (e.loaded * 100).toFixed(1);
             console.log(`⬇️ Download: ${percent}%`);
+            
+            // Update UI elements
             const progressEl = document.getElementById('modelDownloadProgress');
+            const statusBadge = document.getElementById('statusBadge');
+            const statusMessage = document.getElementById('statusMessage');
+            
             if (progressEl) {
               progressEl.style.display = 'block';
               progressEl.value = e.loaded;
+            }
+            if (statusBadge) {
+              statusBadge.className = 'status-badge downloading';
+              statusBadge.innerHTML = '<span class="spinner"></span> Downloading...';
+            }
+            if (statusMessage) {
+              statusMessage.textContent = `Downloading model: ${percent}% complete`;
             }
           });
         }
@@ -577,8 +591,8 @@ async function handleFileUpload(files) {
           uploadedFiles[fileId].fileData = audioData; // Store base64 data for database
           uploadedFiles[fileId].audioInfo = audioInfo;
 
-          // Display metadata in chat
-          fileContent = `[Audio: ${fileName} - ${audioInfo.duration}, ${audioInfo.size}]`;
+          // Display metadata in chat with warning
+          fileContent = `[Audio: ${fileName} - ${audioInfo.duration}, ${audioInfo.size}]\n⚠️ Note: Audio files are displayed but cannot be processed by the AI (not supported).`;
 
         } else {
           // For PDF and other documents, store both the file data AND extracted text
@@ -1056,11 +1070,141 @@ async function deleteChat(chatId) {
   updateStorageInfo();
 }
 
+// Trigger Gemini Nano download (must be called from user gesture)
+async function downloadGeminiNano() {
+  console.log("Starting Gemini Nano download...");
+  
+  const statusBadge = document.getElementById('statusBadge');
+  const statusMessage = document.getElementById('statusMessage');
+  const downloadBtn = document.getElementById('downloadModelBtn');
+  
+  try {
+    // Hide the download button
+    if (downloadBtn) downloadBtn.style.display = 'none';
+    
+    // Update UI to show download in progress
+    if (statusBadge) {
+      statusBadge.className = 'status-badge downloading';
+      statusBadge.innerHTML = '<span class="spinner"></span> Downloading...';
+    }
+    if (statusMessage) {
+      statusMessage.textContent = 'Starting download...';
+    }
+    
+    const session = await LanguageModel.create({
+      monitor(monitor) {
+        monitor.addEventListener("downloadprogress", (e) => {
+          // e.loaded is a 0–1 fraction
+          const percent = Math.round(e.loaded * 100);
+          console.log(`Downloading Gemini Nano… ${percent}%`);
+          
+          // Update UI
+          if (statusMessage) {
+            statusMessage.textContent = `Downloading model: ${percent}% complete`;
+          }
+          
+          const progressEl = document.getElementById('modelDownloadProgress');
+          if (progressEl) {
+            progressEl.style.display = 'block';
+            progressEl.value = e.loaded;
+          }
+        });
+      }
+    });
+
+    console.log("Gemini Nano download complete ✨");
+
+    // Destroy the session since we only wanted to trigger download
+    session.destroy();
+    
+    // Hide progress bar
+    const progressEl = document.getElementById('modelDownloadProgress');
+    if (progressEl) progressEl.style.display = 'none';
+    
+    // Re-check availability to update status
+    await checkAvailability();
+    
+  } catch (error) {
+    console.error("Error downloading Gemini Nano:", error);
+    
+    if (statusBadge) {
+      statusBadge.className = 'status-badge unavailable';
+      statusBadge.textContent = '❌ Download Failed';
+    }
+    if (statusMessage) {
+      statusMessage.textContent = `Error: ${error.message}`;
+    }
+    // Show download button again
+    if (downloadBtn) downloadBtn.style.display = 'block';
+  }
+}
+
 async function checkAvailability() {
   const statusBadge = document.getElementById('statusBadge');
   const statusMessage = document.getElementById('statusMessage');
+  const downloadBtn = document.getElementById('downloadModelBtn');
 
   try {
+    // Hide download button initially
+    if (downloadBtn) downloadBtn.style.display = 'none';
+    
+    // First check if LanguageModel API is available
+    if (typeof LanguageModel === 'undefined') {
+      statusBadge.className = 'status-badge unavailable';
+      statusBadge.innerHTML = '❌ Not Available';
+      statusMessage.textContent = 'Chrome AI not available in this browser';
+      showErrorOverlay(new Error('LanguageModel API not available'));
+      return;
+    }
+    
+    // Check model availability status
+    const availability = await LanguageModel.availability();
+    console.log('Model availability status:', availability);
+    
+    // If model is unavailable (crashed), show error overlay immediately
+    if (availability === 'unavailable') {
+      console.error('💀 Model is unavailable - likely crashed too many times');
+      
+      statusBadge.className = 'status-badge unavailable';
+      statusBadge.innerHTML = '🔄 Restart Required';
+      statusMessage.innerHTML = 'Model crashed. <strong>Restart Chrome</strong> to fix.';
+      
+      try { localStorage.setItem('chrome-ai-restart-required', '1'); } catch { }
+      
+      const crashError = new Error('PERMANENTLY_DISABLED: Model unavailable. The model has crashed too many times. Restart Chrome to fix.');
+      showErrorOverlay(crashError);
+      return;
+    }
+    
+    // If model is downloading, show download status (not error)
+    if (availability === 'downloading') {
+      statusBadge.className = 'status-badge downloading';
+      statusBadge.innerHTML = '<span class="spinner"></span> Downloading...';
+      statusMessage.textContent = 'Model download in progress... Please wait.';
+      
+      // Try to initialize to hook into download progress
+      try {
+        session = await aiSession.ensure();
+      } catch (e) {
+        // If it fails due to user gesture, show download button
+        if (e.message?.includes('user gesture')) {
+          statusBadge.innerHTML = '⬇️ Download Required';
+          statusMessage.textContent = 'Click the button below to start/resume download';
+          if (downloadBtn) downloadBtn.style.display = 'block';
+        }
+      }
+      return;
+    }
+    
+    // If model is downloadable, show download button
+    if (availability === 'downloadable') {
+      statusBadge.className = 'status-badge unavailable';
+      statusBadge.innerHTML = '⬇️ Download Required';
+      statusMessage.textContent = 'Click the button below to download the AI model';
+      if (downloadBtn) downloadBtn.style.display = 'block';
+      return;
+    }
+    
     statusBadge.className = 'status-badge downloading';
     statusBadge.innerHTML = '<span class="spinner"></span> Checking...';
     statusMessage.textContent = 'Initializing AI model...';
@@ -1086,6 +1230,23 @@ async function checkAvailability() {
 
     } catch (sessionError) {
       console.error('❌ Session creation failed:', sessionError);
+
+      // Check if download is required (user gesture needed)
+      if (sessionError.message?.includes('user gesture') || 
+          sessionError.message?.includes('downloadable') ||
+          sessionError.message?.includes('downloading')) {
+        console.log('⬇️ Model download requires user action');
+        
+        statusBadge.className = 'status-badge unavailable';
+        statusBadge.innerHTML = '⬇️ Download Required';
+        statusMessage.textContent = 'Click the button below to download the AI model';
+        
+        // Show download button (don't show error overlay for this)
+        if (downloadBtn) downloadBtn.style.display = 'block';
+        
+        // Don't show the error overlay for download requirement
+        return;
+      }
 
       // Check for crash/restart required error
       if (sessionError.message?.includes('CHROME_RESTART_REQUIRED') ||
@@ -1140,11 +1301,13 @@ async function initializeModel(availability, statusMessage) {
       const creationOptions = {
         temperature: temperature,
         topK: topK,
-        // Enable multimodal support for images and audio
+        // Enable multimodal support for images
+        // Note: Audio is NOT currently supported by Chrome's Gemini Nano
+        // The Prompt API only supports text and image inputs
         expectedInputs: [
           { type: 'text' },
-          { type: 'image' },
-          { type: 'audio' }
+          { type: 'image' }
+          // { type: 'audio' } // Not supported - will cause session creation to fail
         ],
         expectedOutputs: [
           { type: 'text', languages: ['en'] }
@@ -1819,12 +1982,18 @@ async function sendMessage() {
   if (successfulFiles.length > 0) {
     console.log(`✓ ${successfulFiles.length} file(s) uploaded - including content`);
 
-    // Check if we have image or audio files (multimodal)
+    // Check if we have image files (multimodal)
+    // Note: Audio is NOT supported by Gemini Nano
     const imageFiles = successfulFiles.filter(f => f.file && f.type.startsWith('image/'));
     const audioFiles = successfulFiles.filter(f => f.file && f.type.startsWith('audio/'));
     const textFiles = successfulFiles.filter(f => !f.file); // Text-based files
 
-    if (imageFiles.length > 0 || audioFiles.length > 0) {
+    // Warn user if they uploaded audio files (not supported)
+    if (audioFiles.length > 0) {
+      console.warn(`⚠️ ${audioFiles.length} audio file(s) uploaded but will be IGNORED - audio not supported by Gemini Nano`);
+    }
+
+    if (imageFiles.length > 0) {
       hasMultimodalFiles = true;
 
       // Build multimodal content array
@@ -1838,10 +2007,8 @@ async function sendMessage() {
         multimodalContent.push({ type: 'image', value: f.file });
       });
 
-      // Add audio files
-      audioFiles.forEach(f => {
-        multimodalContent.push({ type: 'audio', value: f.file });
-      });
+      // ❌ Audio files are NOT sent to AI (not supported)
+      // audioFiles are shown in UI but ignored in the prompt
 
       // Add text file contents as additional context (hidden from display)
       if (textFiles.length > 0) {
@@ -2548,6 +2715,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch { }
 
+  // Wire up download button
+  const downloadBtn = document.getElementById('downloadModelBtn');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      downloadGeminiNano().catch(console.error);
+    });
+  }
+
   checkAvailability();
 
   const promptInput = document.getElementById('promptInput');
@@ -2600,10 +2775,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Settings button
-  document.getElementById('settingsBtn').addEventListener('click', toggleSettings);
+  document.getElementById('settingsBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSettings();
+  });
 
   // Settings close button
   document.getElementById('settingsCloseBtn').addEventListener('click', closeSettings);
+
+  // Close settings when clicking outside
+  document.addEventListener('click', (e) => {
+    const settingsPanel = document.getElementById('settingsPanel');
+    const settingsBtn = document.getElementById('settingsBtn');
+    
+    if (settingsPanel.classList.contains('open')) {
+      // Check if click is outside settings panel and not on settings button
+      if (!settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)) {
+        closeSettings();
+      }
+    }
+  });
 
   // Storage folder picker button
   document.getElementById('selectStorageFolder').addEventListener('click', selectStorageFolder);

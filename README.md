@@ -1,6 +1,6 @@
-# **Optiease AI – Local Chrome AI + MarkItDown MCP Server**
+# **Optiease AI – Local Chrome AI + MarkItDown Flask Server**
 
-This repository hosts the **Optiease AI Web Client** powered by Chrome's **on-device AI model**, and the backend **MarkItDown MCP Server** for multimodal file conversion, YouTube transcript extraction, and document processing.
+This repository hosts the **Optiease AI Web Client** powered by Chrome's **on-device AI model**, and the backend **MarkItDown Flask Server** for multimodal file conversion, YouTube transcript extraction, and document processing.
 
 **🔍 Check your Chrome AI model status:** [chrome://on-device-internals/](chrome://on-device-internals/)
 
@@ -23,7 +23,7 @@ The system provides a robust, ChatGPT-style experience with:
     main.js           ← Chrome AI session manager & UI logic  (frontend)
 
  /server
-    server.py         ← MarkItDown MCP Flask server (backend)
+    server.py         ← MarkItDown Flask server (backend)
     storage_config.json
 ```
 
@@ -44,7 +44,7 @@ flowchart TD
     B -->|Text Prompt| C[Chrome On-Device Model LanguageModel API]
     B -->|Files / Images / Audio| D[File Widget & Upload Handler]
 
-    D -->|Sends to backend| E[MarkItDown MCP Server server.py]
+    D -->|Sends to backend| E[MarkItDown Flask Server server.py]
 
     E -->|Converted text Transcripts Markdown| F[main.js receives processed result]
 
@@ -128,7 +128,7 @@ The backend is a **Flask + MarkItDown** server that handles:
 - Server-side session storage (optional)
 - Safe file sanitization & error handling
 
-## **Mermaid Diagram – MarkItDown MCP Server**
+## **Mermaid Diagram – MarkItDown Flask Server**
 
 ```mermaid
 flowchart TD
@@ -169,22 +169,31 @@ flowchart TD
 
 # **5. Getting Started**
 
-## **Backend Setup**
+## **One-Click Setup & Run**
 
-### **Quick Start (Recommended)**
+### **🚀 Easiest Way (Recommended)**
 
-Use the automated setup scripts that handle everything for you:
+Simply double-click the setup script for your platform. It will:
 
-**On Windows:**
+- **First run**: Install everything and start the server
+- **Every run after**: Just launch the server
+
+**Windows:**
 
 ```bash
+# Double-click setup.bat
+# OR in terminal:
 setup.bat
 ```
 
-**On macOS/Linux:**
+**macOS/Linux:**
 
 ```bash
+# Make executable (first time only):
 chmod +x setup.sh
+
+# Then double-click setup.sh
+# OR in terminal:
 ./setup.sh
 ```
 
@@ -194,12 +203,28 @@ chmod +x setup.sh
 python3 setup.py
 ```
 
-These scripts will:
+### **What These Scripts Do:**
+
+**First Time:**
 
 - ✓ Check Python installation
 - ✓ Create virtual environment
 - ✓ Install all dependencies
 - ✓ Start the server automatically
+
+**Subsequent Runs:**
+
+- ✓ Detect existing setup
+- ✓ Launch server immediately
+- ✓ No re-installation needed
+
+**💡 Tip:** Want to setup without starting the server? Use `--no-run` flag:
+
+```bash
+setup.bat --no-run          # Windows
+./setup.sh --no-run         # Mac/Linux
+python setup.py --no-run    # Universal
+```
 
 ---
 
@@ -207,19 +232,19 @@ These scripts will:
 
 If you prefer manual installation:
 
-### **1. Install dependencies**
+**1. Install dependencies**
 
 ```bash
 pip install flask flask-cors "markitdown[all]" youtube-transcript-api yt-dlp
 ```
 
-### **2. Run the server**
+**2. Run the server**
 
 ```bash
 python server.py
 ```
 
-### **Default Endpoint**
+**Default Endpoint**
 
 ```
 POST http://localhost:5000/convert
@@ -313,7 +338,7 @@ This README directly references the following project files:
 
 - **Frontend: main.js** – Crash-proof Chrome AI Session Manager, file handling, chat system.
 
-- **Backend: server.py** – MarkItDown MCP server for file and YouTube conversion.
+- **Backend: server.py** – MarkItDown Flask server for file and YouTube conversion.
 
 ---
 

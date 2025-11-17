@@ -1,8 +1,30 @@
 @echo off
-REM Cross-platform setup script for Optiease AI Server
-REM Works on Windows
+REM Optiease AI Server - Setup & Run Script for Windows
+REM First run: Sets up environment and starts server
+REM Subsequent runs: Just starts the server
 
 setlocal enabledelayedexpansion
+
+REM Check if virtual environment already exists
+if exist "venv\Scripts\python.exe" (
+    echo =========================================
+    echo Optiease AI Server Launcher
+    echo =========================================
+    echo.
+    echo Virtual environment detected. Starting server...
+    echo Server will run on http://localhost:5000
+    echo.
+    echo Press Ctrl+C to stop the server
+    echo =========================================
+    echo.
+    
+    venv\Scripts\python.exe server.py
+    
+    echo.
+    echo Server stopped.
+    pause
+    exit /b 0
+)
 
 echo =========================================
 echo Optiease AI Server Setup (Windows)
@@ -77,6 +99,14 @@ echo =========================================
 echo Setup Complete!
 echo =========================================
 echo.
+
+REM Check for --no-run flag
+if "%1"=="--no-run" (
+    echo Setup complete! Run this script again to start the server.
+    pause
+    exit /b 0
+)
+
 echo Starting server...
 echo Server will run on http://localhost:5000
 echo Press Ctrl+C to stop the server
@@ -84,3 +114,8 @@ echo.
 
 REM Run the server
 python server.py
+
+REM If server stops, pause so user can see any error messages
+echo.
+echo Server stopped.
+pause

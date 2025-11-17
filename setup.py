@@ -111,6 +111,23 @@ def start_server(venv_python):
 
 def main():
     """Main setup process"""
+    # Get virtual environment Python path
+    venv_python = get_venv_python()
+    
+    # Check if virtual environment already exists
+    if os.path.exists(venv_python):
+        print_header("Optiease AI Server Launcher")
+        print("✓ Virtual environment detected. Starting server...")
+        
+        # Check if server file exists
+        if not check_server_file():
+            sys.exit(1)
+        
+        # Start server directly
+        start_server(venv_python)
+        return
+    
+    # First-time setup
     print_header("Optiease AI Server Setup")
     print(f"Platform: {platform.system()} {platform.release()}")
     print(f"Working directory: {os.getcwd()}\n")
@@ -129,9 +146,6 @@ def main():
     if not create_venv():
         sys.exit(1)
     
-    # Get virtual environment Python path
-    venv_python = get_venv_python()
-    
     # Install dependencies
     if not install_dependencies(venv_python):
         sys.exit(1)
@@ -141,6 +155,12 @@ def main():
         sys.exit(1)
     
     print_header("Setup Complete!")
+    
+    # Check for --no-run flag
+    if len(sys.argv) > 1 and sys.argv[1] == "--no-run":
+        print("Setup complete! Run this script again to start the server.\n")
+        input("Press Enter to exit...")
+        return
     
     # Start server
     start_server(venv_python)
